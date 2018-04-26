@@ -3,14 +3,17 @@ package au.com.anthonybruno.lichessclient;
 
 import au.com.anthonybruno.lichessclient.http.Json;
 import au.com.anthonybruno.lichessclient.http.JsonClient;
+import au.com.anthonybruno.lichessclient.model.Status;
 import au.com.anthonybruno.lichessclient.model.account.Email;
 import au.com.anthonybruno.lichessclient.model.account.KidModeStatus;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,10 +43,36 @@ public class LichessClient {
         return httpClient.get(URLS.ACCOUNT + "/kid").toObject(KidModeStatus.class);
     }
 
-    public ObjectNode setMyKidModeStatus(boolean status) {
-        ObjectNode toPost = Json.createJsonObject();
-        toPost.set("v", JsonNodeFactory.instance.booleanNode(status));
-        return (ObjectNode) httpClient.post(URLS.ACCOUNT + "/kid", toPost).toJson();
+    public Status setMyKidModeStatus(boolean status) {
+        String url;
+        try {
+            url = new URIBuilder(URLS.ACCOUNT + "/kid").addParameter("v", status + "").build().toString();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        return httpClient.post(url).toObject(Status.class);
+    }
+
+    public Status upgradeToBotAccount() {
+        return httpClient.post(URLS.BOT + "/account/upgrade").toObject(Status.class);
+    }
+
+    public Status makeMove(String gameId, String move) {
+        String url = URLS.BOT + "/game/" + gameId + "/move/" + move;
+        return  httpClient.post(url).toObject(Status.class);
+    }
+
+    public Status abortGame(String gameId) {
+        String url = URLS.BOT + "/game/" + gameId + "/abort";
+        return httpClient.post(url).toObject(Status.class);
+    }
+
+    public Status acceptChallenge(String challengeId) {
+        return httpClient.post(URLS.CHALLENGE + "/" + challengeId + "/accept").toObject(Status.class);
+    }
+
+    public Status declineChallenge(String challengeId) {
+        return httpClient.post(URLS.CHALLENGE + "/" + challengeId + "/decline").toObject(Status.class);
     }
 
 

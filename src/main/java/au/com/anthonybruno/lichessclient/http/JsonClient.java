@@ -10,6 +10,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 
 import java.io.IOException;
+import java.net.URI;
 
 public class JsonClient {
 
@@ -27,14 +28,20 @@ public class JsonClient {
         }
     }
 
+    public JsonResponse post(String url) {
+        return post(url, null);
+    }
+
     public JsonResponse post(String url, Object body) {
         return post(url, Json.writeObjectToJson(body));
     }
 
     public JsonResponse post(String url, JsonNode json) {
         HttpPost httpPost = new HttpPost(url);
-        HttpEntity body = new StringEntity(json.toString(), ContentType.APPLICATION_JSON);
-        httpPost.setEntity(body);
+        if (json != null) {
+            HttpEntity body = new StringEntity(json.toString(), ContentType.APPLICATION_JSON);
+            httpPost.setEntity(body);
+        }
         try {
             return new JsonResponse(this.client.execute(httpPost));
         } catch (IOException e) {
