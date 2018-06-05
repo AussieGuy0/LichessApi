@@ -2,21 +2,19 @@ package au.com.anthonybruno.lichessclient.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 
 import java.io.IOException;
-import java.net.URI;
 
-public class JsonClient {
+public class JsonClient implements AutoCloseable {
 
-    private final HttpClient client;
+    private final CloseableHttpClient client;
     
-    public JsonClient(HttpClient httpClient) {
+    public JsonClient(CloseableHttpClient httpClient) {
         this.client = httpClient;
     }
 
@@ -47,5 +45,10 @@ public class JsonClient {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        client.close();
     }
 }

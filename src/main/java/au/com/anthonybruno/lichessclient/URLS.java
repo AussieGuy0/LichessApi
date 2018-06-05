@@ -4,7 +4,7 @@ import static au.com.anthonybruno.lichessclient.LichessClient.BASE_URL;
 
 public enum URLS {
 
-    ACCOUNT("account"), BOT("bot"), CHALLENGE("challenge");
+    ACCOUNT("account"), BOT("api/bot"), CHALLENGE("api/challenge"), TOURNAMENT("api/tournament"), TEAM("/team");
 
     private final String url;
 

@@ -3,14 +3,15 @@ package au.com.anthonybruno.lichessclient.http;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 
 import java.io.IOException;
 
-public class JsonResponse {
+public class JsonResponse implements AutoCloseable {
 
-    private final HttpResponse httpResponse;
+    private final CloseableHttpResponse httpResponse;
 
-    public JsonResponse(HttpResponse httpResponse) {
+    public JsonResponse(CloseableHttpResponse httpResponse) {
         this.httpResponse = httpResponse;
     }
 
@@ -27,6 +28,15 @@ public class JsonResponse {
             return Json.readJson(httpResponse.getEntity().getContent(), c);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            httpResponse.close();
+        } catch (IOException e) {
+            //closing quietly!
         }
     }
 }

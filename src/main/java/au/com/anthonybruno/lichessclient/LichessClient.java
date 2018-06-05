@@ -3,10 +3,10 @@ package au.com.anthonybruno.lichessclient;
 
 import au.com.anthonybruno.lichessclient.http.Json;
 import au.com.anthonybruno.lichessclient.http.JsonClient;
+import au.com.anthonybruno.lichessclient.http.JsonResponse;
 import au.com.anthonybruno.lichessclient.model.Status;
 import au.com.anthonybruno.lichessclient.model.account.Email;
 import au.com.anthonybruno.lichessclient.model.account.KidModeStatus;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
 import org.apache.http.client.utils.URIBuilder;
@@ -17,7 +17,7 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 
-public class LichessClient {
+public class LichessClient implements AutoCloseable {
 
     public static final String BASE_URL ="https://lichess.org";
     private final JsonClient httpClient;
@@ -31,16 +31,16 @@ public class LichessClient {
         return (ObjectNode) httpClient.get(URLS.ACCOUNT + "/me").toJson();
     }
 
-    public Email getMyEmailAddress() {
-        return httpClient.get(URLS.ACCOUNT + "/email").toObject(Email.class);
+    public String getMyEmailAddress() {
+        return get(URLS.ACCOUNT + "/email", Email.class).getEmail();
     }
 
     public ObjectNode getMyPreferences() {
         return (ObjectNode) httpClient.get(URLS.ACCOUNT + "/preferences").toJson();
     }
 
-    public KidModeStatus getMyKidModeStatus() {
-        return httpClient.get(URLS.ACCOUNT + "/kid").toObject(KidModeStatus.class);
+    public boolean getMyKidModeStatus() {
+        return get(URLS.ACCOUNT + "/kid", KidModeStatus.class).isOn();
     }
 
     public Status setMyKidModeStatus(boolean status) {
@@ -50,30 +50,84 @@ public class LichessClient {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        return httpClient.post(url).toObject(Status.class);
+        return post(url, Status.class);
     }
 
     public Status upgradeToBotAccount() {
-        return httpClient.post(URLS.BOT + "/account/upgrade").toObject(Status.class);
+        return post(URLS.BOT + "/account/upgrade", Status.class);
     }
 
     public Status makeMove(String gameId, String move) {
         String url = URLS.BOT + "/game/" + gameId + "/move/" + move;
-        return  httpClient.post(url).toObject(Status.class);
+        return post(url, Status.class);
     }
+
+    public Status writeInChat(String gameId, String room, String message) {
+        String url = URLS.BOT + "/game/" + gameId + "/chat";
+        ObjectNode json = Json.createJsonObject();
+        json.put("room", room);
+        json.put("text", message);
+        return post(url, json, Status.class);
+    }
+
 
     public Status abortGame(String gameId) {
         String url = URLS.BOT + "/game/" + gameId + "/abort";
-        return httpClient.post(url).toObject(Status.class);
+        return post(url, Status.class);
+    }
+
+    public Status resignGame(String gameId) {
+        String url = URLS.BOT + "/game/" + gameId + "/resign";
+        return post(url, Status.class);
     }
 
     public Status acceptChallenge(String challengeId) {
-        return httpClient.post(URLS.CHALLENGE + "/" + challengeId + "/accept").toObject(Status.class);
+        return post(URLS.CHALLENGE + "/" + challengeId + "/accept", Status.class);
     }
 
     public Status declineChallenge(String challengeId) {
-        return httpClient.post(URLS.CHALLENGE + "/" + challengeId + "/decline").toObject(Status.class);
+        return post(URLS.CHALLENGE + "/" + challengeId + "/decline", Status.class);
+    }
+
+    public ObjectNode getMembersOfTeam(String teamId, Integer max) {
+        String url;
+        try {
+            URIBuilder uriBuilder = new URIBuilder(URLS.TEAM + "/" + teamId + "/users");
+            if (max != null) {
+                uriBuilder.addParameter("max", String.valueOf(max));
+            }
+            url = uriBuilder.build().toString();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        return (ObjectNode) httpClient.get(url).toJson();
+    }
+
+    public ObjectNode getCurrentTournaments() {
+        return (ObjectNode) httpClient.get(URLS.TOURNAMENT.toString()).toJson();
     }
 
 
+    private <T> T get(String url, Class<T> toConvertTo) {
+        try (JsonResponse response = httpClient.get(url)) {
+            return response.toObject(toConvertTo);
+        }
+    }
+
+    private <T> T post(String url, Class<T> toConvertTo) {
+        try (JsonResponse response = httpClient.post(url)) {
+           return response.toObject(toConvertTo);
+        }
+    }
+
+    private <T> T post(String url, ObjectNode postData,  Class<T> toConvertTo) {
+        try (JsonResponse response = httpClient.post(url, postData)) {
+            return response.toObject(toConvertTo);
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        httpClient.close();
+    }
 }
