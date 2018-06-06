@@ -4,9 +4,11 @@ package au.com.anthonybruno.lichessclient;
 import au.com.anthonybruno.lichessclient.http.Json;
 import au.com.anthonybruno.lichessclient.http.JsonClient;
 import au.com.anthonybruno.lichessclient.http.JsonResponse;
+import au.com.anthonybruno.lichessclient.http.NodeProcessor;
 import au.com.anthonybruno.lichessclient.model.Status;
 import au.com.anthonybruno.lichessclient.model.account.Email;
 import au.com.anthonybruno.lichessclient.model.account.KidModeStatus;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
 import org.apache.http.client.utils.URIBuilder;
@@ -19,7 +21,7 @@ import java.util.List;
 
 public class LichessClient implements AutoCloseable {
 
-    public static final String BASE_URL ="https://lichess.org";
+    public static final String BASE_URL = "https://lichess.org";
     private final JsonClient httpClient;
 
     public LichessClient(String apiToken) {
@@ -28,7 +30,7 @@ public class LichessClient implements AutoCloseable {
     }
 
     public ObjectNode getMyProfile() {
-        return (ObjectNode) httpClient.get(URLS.ACCOUNT + "/me").toJson();
+        return (ObjectNode) get(URLS.ACCOUNT + "/me");
     }
 
     public String getMyEmailAddress() {
@@ -36,7 +38,7 @@ public class LichessClient implements AutoCloseable {
     }
 
     public ObjectNode getMyPreferences() {
-        return (ObjectNode) httpClient.get(URLS.ACCOUNT + "/preferences").toJson();
+        return (ObjectNode) get(URLS.ACCOUNT + "/preferences");
     }
 
     public boolean getMyKidModeStatus() {
@@ -55,6 +57,14 @@ public class LichessClient implements AutoCloseable {
 
     public Status upgradeToBotAccount() {
         return post(URLS.BOT + "/account/upgrade", Status.class);
+    }
+
+    public void streamIncomingEvents(NodeProcessor processor) {
+        httpClient.getAndStream(URLS.STREAM + "/event", processor);
+    }
+
+    public void streamGameState(String gameId, NodeProcessor processor) {
+        httpClient.getAndStream(URLS.BOT + "/game/stream/" + gameId, processor);
     }
 
     public Status makeMove(String gameId, String move) {
@@ -100,13 +110,18 @@ public class LichessClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        return (ObjectNode) httpClient.get(url).toJson();
+        return (ObjectNode) get(url);
     }
 
     public ObjectNode getCurrentTournaments() {
-        return (ObjectNode) httpClient.get(URLS.TOURNAMENT.toString()).toJson();
+        return (ObjectNode) get(URLS.TOURNAMENT.toString());
     }
 
+    private JsonNode get(String url) {
+        try (JsonResponse response = httpClient.get(url)) {
+            return response.toJson();
+        }
+    }
 
     private <T> T get(String url, Class<T> toConvertTo) {
         try (JsonResponse response = httpClient.get(url)) {
@@ -116,11 +131,11 @@ public class LichessClient implements AutoCloseable {
 
     private <T> T post(String url, Class<T> toConvertTo) {
         try (JsonResponse response = httpClient.post(url)) {
-           return response.toObject(toConvertTo);
+            return response.toObject(toConvertTo);
         }
     }
 
-    private <T> T post(String url, ObjectNode postData,  Class<T> toConvertTo) {
+    private <T> T post(String url, ObjectNode postData, Class<T> toConvertTo) {
         try (JsonResponse response = httpClient.post(url, postData)) {
             return response.toObject(toConvertTo);
         }
