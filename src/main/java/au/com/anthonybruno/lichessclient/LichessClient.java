@@ -4,7 +4,7 @@ package au.com.anthonybruno.lichessclient;
 import au.com.anthonybruno.lichessclient.http.Json;
 import au.com.anthonybruno.lichessclient.http.JsonClient;
 import au.com.anthonybruno.lichessclient.http.JsonResponse;
-import au.com.anthonybruno.lichessclient.http.NodeProcessor;
+import au.com.anthonybruno.lichessclient.http.JsonStreamProcessor;
 import au.com.anthonybruno.lichessclient.model.Status;
 import au.com.anthonybruno.lichessclient.model.account.Email;
 import au.com.anthonybruno.lichessclient.model.account.KidModeStatus;
@@ -59,11 +59,11 @@ public class LichessClient implements AutoCloseable {
         return post(URLS.BOT + "/account/upgrade", Status.class);
     }
 
-    public void streamIncomingEvents(NodeProcessor processor) {
+    public void streamIncomingEvents(JsonStreamProcessor processor) {
         httpClient.getAndStream(URLS.STREAM + "/event", processor);
     }
 
-    public void streamGameState(String gameId, NodeProcessor processor) {
+    public void streamGameState(String gameId, JsonStreamProcessor processor) {
         httpClient.getAndStream(URLS.BOT + "/game/stream/" + gameId, processor);
     }
 
@@ -145,4 +145,5 @@ public class LichessClient implements AutoCloseable {
     public void close() throws Exception {
         httpClient.close();
     }
+
 }
