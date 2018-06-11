@@ -1,13 +1,15 @@
 package au.com.anthonybruno.lichessclient;
 
 
+import au.com.anthonybruno.lichessclient.handler.GameEventHandler;
+import au.com.anthonybruno.lichessclient.handler.UserEventHandler;
 import au.com.anthonybruno.lichessclient.http.Json;
 import au.com.anthonybruno.lichessclient.http.JsonClient;
 import au.com.anthonybruno.lichessclient.http.JsonResponse;
-import au.com.anthonybruno.lichessclient.http.JsonStreamProcessor;
 import au.com.anthonybruno.lichessclient.model.Status;
 import au.com.anthonybruno.lichessclient.model.account.Email;
 import au.com.anthonybruno.lichessclient.model.account.KidModeStatus;
+import au.com.anthonybruno.lichessclient.model.event.GameStart;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
@@ -59,12 +61,33 @@ public class LichessClient implements AutoCloseable {
         return post(URLS.BOT + "/account/upgrade", Status.class);
     }
 
-    public void streamIncomingEvents(JsonStreamProcessor processor) {
-        httpClient.getAndStream(URLS.STREAM + "/event", processor);
+    public void streamIncomingEvents(UserEventHandler handler) {
+        httpClient.getAndStream(URLS.STREAM + "/event", (json, context) -> {
+            ObjectNode node = (ObjectNode) json;
+            String type = node.get("type").asText();
+            if (type.equals("challenge")) {
+                handler.incomingChallenge(node);
+            } else if (type.equals("gameStart")) {
+                handler.gameStart(Json.parseJson(node, GameStart.class));
+            } else {
+                throw new RuntimeException("Unhandled event type: '" + type + "' \nFull json: " + json);
+            }
+        });
     }
 
-    public void streamGameState(String gameId, JsonStreamProcessor processor) {
-        httpClient.getAndStream(URLS.BOT + "/game/stream/" + gameId, processor);
+    public void streamGameState(String gameId, GameEventHandler handler) {
+        httpClient.getAndStream(URLS.BOT + "/game/stream/" + gameId, (json, context) -> {
+            ObjectNode node = (ObjectNode) json;
+            String type = node.get("type").asText();
+            if (type.equals("gameFull")) {
+                handler.fullGameState(node);
+            } else if (type.equals("gameState")) {
+                handler.gameStateUpdate(node);
+            } else if (type.equals("chatLine")) {
+                handler.chatReceived(node);
+            }
+
+        });
     }
 
     public Status makeMove(String gameId, String move) {

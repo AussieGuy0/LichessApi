@@ -29,9 +29,17 @@ public class Json {
     }
 
 
-    public static <T> T readJson(InputStream inputStream, Class<T> c) {
+    public static <T> T parseJson(InputStream inputStream, Class<T> c) {
         try {
             return objectMapper.readValue(inputStream, c);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> T parseJson(JsonNode node, Class<T> c) {
+        try {
+            return objectMapper.treeToValue(node, c);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
